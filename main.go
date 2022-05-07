@@ -6,12 +6,15 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
 
+/////////////////////////////////////////////////////////////STRUCTS
+
+///////////////////////////////////////////////////////////////
 func main() {
 	analizar()
 }
@@ -31,7 +34,9 @@ func analizar() {
 		if strings.Contains(comando, "exit") {
 			finalizar = true
 		} else {
-			if comando != "" && comando != "exit\n" {
+			if strings.Contains(comando, "#") {
+				fmt.Println(comando)
+			} else if comando != "" && comando != "exit\n" {
 				split_comando(comando)
 			}
 		}
@@ -43,7 +48,7 @@ func split_comando(comando string) {
 	comando = strings.Replace(comando, "\n", "", 1)
 	comando = strings.Replace(comando, "\r", "", 1)
 	if strings.Contains(comando, "mostrar") {
-		commandArray = append(commandArray, comando)
+
 	} else {
 		commandArray = strings.Split(comando, " ")
 	}
@@ -53,6 +58,7 @@ func split_comando(comando string) {
 func ejecucion_comando(commandArray []string) {
 	data := strings.ToLower(commandArray[0])
 	if data == "mkdisk" {
+		fmt.Println("Creacion de Disco")
 		crear_disco(commandArray)
 	} else if data == "rmdisk" {
 		//escribir(commandArray)
@@ -67,6 +73,8 @@ func ejecucion_comando(commandArray []string) {
 func crear_disco(commandArray []string) {
 	tamano := 0
 	dimensional := ""
+	fit := "FF"
+	path := ""
 	tamano_archivo := 0
 	limite := 0
 	bloque := make([]byte, 1024)
@@ -83,9 +91,17 @@ func crear_disco(commandArray []string) {
 			if err != nil {
 				msg_error(err)
 			}
-		} else if strings.Contains(data, "-dimensional=") {
-			dimensional = strings.Replace(data, "-dimensional=", "", 1)
+		} else if strings.Contains(data, "-unit=") {
+			dimensional = strings.Replace(data, "-unit=", "", 1)
 			dimensional = strings.Replace(dimensional, "\"", "", 2)
+		} else if strings.Contains(data, "-fit=") {
+			fit = strings.Replace(data, "-fit=", "", 1)
+			fit = strings.Replace(fit, "\"", "", 2)
+		} else if strings.Contains(data, "-path=") {
+			path = strings.Replace(data, "-path=", "", 1)
+			path = strings.Replace(path, "\"", "", 2)
+		} else {
+			fmt.Println("Parametro Incorrecto")
 		}
 	}
 
@@ -103,8 +119,10 @@ func crear_disco(commandArray []string) {
 		bloque[j] = 0
 	}
 
+	//Creacion de Directorio
+	crearDirectorio(getDirectorio(path))
 	// Creacion, escritura y cierre de archivo
-	disco, err := os.Create("Disco_Ejemplo.dk")
+	disco, err := os.Create(path)
 	if err != nil {
 		msg_error(err)
 	}
@@ -122,9 +140,35 @@ func crear_disco(commandArray []string) {
 	fmt.Print(tamano)
 	fmt.Print(" Dimensional: ")
 	fmt.Println(dimensional)
+	fmt.Print(" Fit: ")
+	fmt.Println(fit)
+	fmt.Print(" Path: ")
+	fmt.Println(path)
+	fmt.Print(" PathDir: ")
+	fmt.Println(getDirectorio(path))
+	fmt.Print(" PathArch: ")
+	fmt.Println(getArchivo(path))
 }
 
 //////////////////////////////////////////////////////////////////////
+func getDirectorio(direccion string) string {
+	var aux string = filepath.Dir(direccion)
+	return aux
+}
+
+func getArchivo(direccion string) string {
+	var aux string = filepath.Base(direccion)
+	return aux
+}
+
+func crearDirectorio(direccion string) {
+	if _, err := os.Stat(direccion); os.IsNotExist(err) {
+		err = os.MkdirAll(direccion, os.ModePerm)
+		if err != nil {
+			fmt.Println("No se pudo crear el Directorio")
+		}
+	}
+}
 
 func struct_to_bytes(p interface{}) []byte {
 	buf := bytes.Buffer{}
@@ -136,22 +180,22 @@ func struct_to_bytes(p interface{}) []byte {
 	return buf.Bytes()
 }
 
-func bytes_to_struct(s []byte) ejemplo {
-	p := ejemplo{}
-	dec := gob.NewDecoder(bytes.NewReader(s))
-	err := dec.Decode(&p)
-	if err != nil && err != io.EOF {
-		msg_error(err)
-	}
-	return p
-}
+// func bytes_to_struct(s []byte) ejemplo {
+// 	p := ejemplo{}
+// 	dec := gob.NewDecoder(bytes.NewReader(s))
+// 	err := dec.Decode(&p)
+// 	if err != nil && err != io.EOF {
+// 		msg_error(err)
+// 	}
+// 	return p
+// }
 
-func size_struct() int {
-	disco, err := ioutil.ReadFile("Disco_Ejemplo.dk")
-	if err != nil {
-		msg_error(err)
-	}
-	ejm := bytes_to_struct(disco)
-	ejm2 := struct_to_bytes(ejm)
-	return len(ejm2)
-}
+// func size_struct() int {
+// 	disco, err := ioutil.ReadFile("Disco_Ejemplo.dk")
+// 	if err != nil {
+// 		msg_error(err)
+// 	}
+// 	ejm := bytes_to_struct(disco)
+// 	ejm2 := struct_to_bytes(ejm)
+// 	return len(ejm2)
+// }
